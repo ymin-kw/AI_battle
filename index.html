@@ -107,7 +107,7 @@
             }
         }
 
-        // 3. 참가자 명단 불러오기 (자동)
+        // 3. 참가자 명단 불러오기 (수정됨: 선택 유지 기능 추가)
         async function updateList() {
             try {
                 const res = await fetch(`${SERVER_URL}/participants`);
@@ -115,17 +115,37 @@
                 
                 document.getElementById('status').innerText = `현재 참가자: ${list.length}명`;
 
-                // 드롭다운 메뉴 업데이트
+                // 1. 현재 교수님이 선택해둔 선수 기억하기
+                const p1Select = document.getElementById('p1-select');
+                const p2Select = document.getElementById('p2-select');
+                const savedP1 = p1Select.value;
+                const savedP2 = p2Select.value;
+
+                // 2. 새로운 명단 만들기
                 const opts = list.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
-                document.getElementById('p1-select').innerHTML = opts;
-                document.getElementById('p2-select').innerHTML = opts;
+
+                // 3. 명단 내용이 실제로 바뀌었을 때만 화면 업데이트
+                if (p1Select.innerHTML !== opts) {
+                    p1Select.innerHTML = opts;
+                    p2Select.innerHTML = opts;
+
+                    // 4. [핵심] 아까 기억해둔 선수로 다시 돌려놓기 (복구)
+                    // 만약 기억해둔 선수가 여전히 명단에 있다면 그 사람을 유지함
+                    if (savedP1 && list.some(p => p.name === savedP1)) {
+                        p1Select.value = savedP1;
+                    }
+                    if (savedP2 && list.some(p => p.name === savedP2)) {
+                        p2Select.value = savedP2;
+                    }
+                }
             } catch (e) {
-                console.log("서버 아직 안 켜짐");
+                console.log("서버 연결 확인 중...");
             }
         }
 
         // 2초마다 명단 자동 갱신
         setInterval(updateList, 2000);
+        
     </script>
 </body>
 </html>
