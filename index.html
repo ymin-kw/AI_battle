@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>제1회 AI 천하제일 무술대회</title>
+    <style>
+        /* 스타일: 모바일 친화적 디자인 */
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; text-align: center; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1 { color: #4a4a4a; margin-bottom: 10px; }
+        input { width: 90%; padding: 12px; margin: 8px 0; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; }
+        button { width: 100%; padding: 15px; margin-top: 10px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        
+        .btn-register { background-color: #4CAF50; color: white; }
+        .btn-battle { background-color: #FF5722; color: white; margin-top: 30px; }
+        
+        #status { margin-top: 15px; color: #666; font-weight: bold; }
+        #battle-log { margin-top: 20px; text-align: left; background: #2d2d2d; color: #00ff00; padding: 15px; border-radius: 10px; white-space: pre-wrap; min-height: 100px; font-family: monospace; line-height: 1.6; }
+        .winner-text { color: #FFD700; font-size: 1.2em; font-weight: bold; text-align: center; display: block; margin-bottom: 10px;}
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>🥊 AI 배틀 로얄</h1>
+        <p>나만의 캐릭터를 등록하고 우승에 도전하세요!</p>
+
+        <div id="register-zone">
+            <input type="text" id="name" placeholder="닉네임 (예: 파이썬마스터)">
+            <input type="text" id="skill" placeholder="필살기 (예: 무한루프 걸기)">
+            <input type="text" id="desc" placeholder="특징/컨셉 (예: 끈질긴 성격)">
+            <button class="btn-register" onclick="register()">참가 신청하기</button>
+        </div>
+
+        <div id="status">현재 참가자: 0명</div>
+
+        <hr style="margin: 30px 0;">
+
+        <div id="admin-zone">
+            <h3>🏆 경기 중계석 (교수님용)</h3>
+            <select id="p1-select"><option>선수 1 선택</option></select>
+            <span> VS </span>
+            <select id="p2-select"><option>선수 2 선택</option></select>
+            <button class="btn-battle" onclick="startBattle()">⚔️ 배틀 시작!</button>
+        </div>
+
+        <div id="battle-log">경기 결과가 여기에 표시됩니다...</div>
+    </div>
+
+    <script>
+        // ============================================================
+        // 🚨 여기에 Replit 주소를 붙여넣으세요! (따옴표 유지)
+        // ============================================================
+        const SERVER_URL = "https://0447153f-7427-4b99-bbc6-dea46f45d90b-00-19u3uwashraos.pike.replit.dev/"; 
+        // ============================================================
+
+        // 1. 참가 신청 함수
+        async function register() {
+            const name = document.getElementById('name').value;
+            const skill = document.getElementById('skill').value;
+            const desc = document.getElementById('desc').value;
+
+            if(!name || !skill) return alert("닉네임과 기술을 입력해주세요!");
+
+            try {
+                const res = await fetch(`${SERVER_URL}/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, skill, desc })
+                });
+                const data = await res.json();
+                
+                if(res.ok) {
+                    alert(data.message);
+                    updateList(); // 명단 갱신
+                } else {
+                    alert("오류: " + data.detail);
+                }
+            } catch (e) {
+                alert("서버 연결 실패! 주소를 확인하세요.");
+            }
+        }
+
+        // 2. 배틀 시작 함수
+        async function startBattle() {
+            const p1 = document.getElementById('p1-select').value;
+            const p2 = document.getElementById('p2-select').value;
+
+            if(p1 === p2 || p1.includes("선택")) return alert("두 명의 선수를 선택해주세요!");
+
+            const logBox = document.getElementById('battle-log');
+            logBox.innerHTML = "⏳ 심판(Gemini)이 판정 중입니다... (약 3초 소요)";
+
+            try {
+                const res = await fetch(`${SERVER_URL}/battle`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ p1_name: p1, p2_name: p2 })
+                });
+                const data = await res.json();
+
+                // 결과 출력 (타이핑 효과처럼 보이게)
+                logBox.innerHTML = `<span class="winner-text">🏆 승자: ${data.winner}</span>\n\n` + data.log + `\n\n👉 승리 요인: ${data.reason}`;
+            } catch (e) {
+                logBox.innerText = "에러 발생! 서버 상태를 확인하세요.";
+            }
+        }
+
+        // 3. 참가자 명단 불러오기 (자동)
+        async function updateList() {
+            try {
+                const res = await fetch(`${SERVER_URL}/participants`);
+                const list = await res.json();
+                
+                document.getElementById('status').innerText = `현재 참가자: ${list.length}명`;
+
+                // 드롭다운 메뉴 업데이트
+                const opts = list.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+                document.getElementById('p1-select').innerHTML = opts;
+                document.getElementById('p2-select').innerHTML = opts;
+            } catch (e) {
+                console.log("서버 아직 안 켜짐");
+            }
+        }
+
+        // 2초마다 명단 자동 갱신
+        setInterval(updateList, 2000);
+    </script>
+</body>
+</html>
